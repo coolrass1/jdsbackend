@@ -24,7 +24,7 @@ public class DocumentController {
     private final DocumentService documentService;
 
     @PostMapping("/upload")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
     public ResponseEntity<DocumentResponse> uploadDocument(
             @RequestParam("caseId") Long caseId,
             @RequestParam("file") MultipartFile file) {
@@ -33,21 +33,21 @@ public class DocumentController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
     public ResponseEntity<DocumentResponse> getDocumentById(@PathVariable Long id) {
         DocumentResponse response = documentService.getDocumentById(id);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/case/{caseId}")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
     public ResponseEntity<List<DocumentResponse>> getDocumentsByCaseId(@PathVariable Long caseId) {
         List<DocumentResponse> documents = documentService.getDocumentsByCaseId(caseId);
         return ResponseEntity.ok(documents);
     }
 
     @GetMapping("/download/{id}")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
     public ResponseEntity<Resource> downloadDocument(@PathVariable Long id) {
         DocumentResponse documentInfo = documentService.getDocumentById(id);
         Resource resource = documentService.downloadDocument(id);
