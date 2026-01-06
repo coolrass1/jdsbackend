@@ -100,13 +100,16 @@ public class AuthService {
                 .map(RefreshToken::getUser)
                 .map(user -> {
                     String token = jwtUtils.generateTokenFromUsername(user.getUsername());
+                    RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
                     List<String> roles = user.getRoles().stream()
                             .map(Role::name)
                             .collect(Collectors.toList());
 
+                    // System.out.println("Refresh token generated: " + refreshToken.getToken());
+
                     return new AuthResponse(
                             token,
-                            requestRefreshToken,
+                            refreshToken.getToken(),
                             user.getUsername(),
                             user.getEmail(),
                             roles);

@@ -60,18 +60,14 @@ public class TaskService {
 
     @Transactional(readOnly = true)
     public List<TaskResponse> getTasksByCase(Long caseId) {
-        Case caseEntity = caseRepository.findById(caseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Case not found with id: " + caseId));
-        return taskRepository.findByCaseEntity(caseEntity).stream()
+        return taskRepository.findByCaseEntityId(caseId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<TaskResponse> getTasksByAssignedUser(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
-        return taskRepository.findByAssignedUser(user).stream()
+        return taskRepository.findByAssignedUserId(userId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }

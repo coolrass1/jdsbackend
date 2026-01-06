@@ -24,6 +24,7 @@ public class CaseController {
     @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
     public ResponseEntity<CaseResponse> createCase(@Valid @RequestBody CaseCreateRequest request) {
         CaseResponse response = caseService.createCase(request);
+        System.out.println("Case created successfully: " + response);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 

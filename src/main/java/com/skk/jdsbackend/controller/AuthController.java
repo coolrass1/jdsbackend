@@ -36,6 +36,7 @@ public class AuthController {
     public ResponseEntity<?> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         try {
             AuthResponse response = authService.refreshToken(request.getRefreshToken());
+            System.out.println("Refresh token: " + request.getRefreshToken());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));

@@ -52,6 +52,13 @@ public class NoteService {
     }
 
     @Transactional(readOnly = true)
+    public List<NoteResponse> getAllNotes() {
+        return noteRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public List<NoteResponse> getNotesByCaseId(Long caseId) {
         Case caseEntity = caseRepository.findById(caseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Case not found with id: " + caseId));

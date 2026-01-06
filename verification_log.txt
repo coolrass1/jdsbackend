@@ -1,0 +1,7 @@
+Starting verification with user: testuser_3511
+1. Registering User...
+Registration Failed: Impossible de se connecter au serveur distant
+
+2. Logging in...
+Login failed. Details:
+Status Code: 

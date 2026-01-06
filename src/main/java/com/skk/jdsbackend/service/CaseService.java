@@ -8,12 +8,15 @@ import com.skk.jdsbackend.entity.User;
 import com.skk.jdsbackend.exception.ResourceNotFoundException;
 import com.skk.jdsbackend.repository.CaseRepository;
 import com.skk.jdsbackend.repository.ClientRepository;
+import com.skk.jdsbackend.repository.DocumentRepository;
+import com.skk.jdsbackend.repository.NoteRepository;
 import com.skk.jdsbackend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,6 +26,8 @@ public class CaseService {
     private final CaseRepository caseRepository;
     private final UserRepository userRepository;
     private final ClientRepository clientRepository;
+    private final NoteRepository noteRepository;
+    private final DocumentRepository documentRepository;
 
     @Transactional
     public CaseResponse createCase(CaseCreateRequest request) {
@@ -59,31 +64,58 @@ public class CaseService {
 
     @Transactional(readOnly = true)
     public List<CaseResponse> getAllCases() {
-        return caseRepository.findAll().stream()
-                .map(this::mapToResponse)
+        List<Case> cases = caseRepository.findAll();
+
+        // Batch load all counts in 2 queries instead of 2N queries
+        Map<Long, Long> noteCounts = noteRepository.countAllGroupedByCaseId().stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+        Map<Long, Long> docCounts = documentRepository.countAllGroupedByCaseId().stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+
+        return cases.stream()
+                .map(c -> mapToResponse(c, noteCounts, docCounts))
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<CaseResponse> getCasesByStatus(CaseStatus status) {
-        return caseRepository.findByStatus(status).stream()
-                .map(this::mapToResponse)
+        List<Case> cases = caseRepository.findByStatus(status);
+
+        Map<Long, Long> noteCounts = noteRepository.countAllGroupedByCaseId().stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+        Map<Long, Long> docCounts = documentRepository.countAllGroupedByCaseId().stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+
+        return cases.stream()
+                .map(c -> mapToResponse(c, noteCounts, docCounts))
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<CaseResponse> getCasesByAssignedUser(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
-        return caseRepository.findByAssignedUser(user).stream()
-                .map(this::mapToResponse)
+        List<Case> cases = caseRepository.findByAssignedUserId(userId);
+
+        Map<Long, Long> noteCounts = noteRepository.countAllGroupedByCaseId().stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+        Map<Long, Long> docCounts = documentRepository.countAllGroupedByCaseId().stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+
+        return cases.stream()
+                .map(c -> mapToResponse(c, noteCounts, docCounts))
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<CaseResponse> searchCasesByTitle(String title) {
-        return caseRepository.findByTitleContainingIgnoreCase(title).stream()
-                .map(this::mapToResponse)
+        List<Case> cases = caseRepository.findByTitleContainingIgnoreCase(title);
+
+        Map<Long, Long> noteCounts = noteRepository.countAllGroupedByCaseId().stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+        Map<Long, Long> docCounts = documentRepository.countAllGroupedByCaseId().stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+
+        return cases.stream()
+                .map(c -> mapToResponse(c, noteCounts, docCounts))
                 .collect(Collectors.toList());
     }
 
@@ -157,8 +189,45 @@ public class CaseService {
             response.setClient(clientSummary);
         }
 
-        response.setNotesCount(caseEntity.getNotes() != null ? caseEntity.getNotes().size() : 0);
-        response.setDocumentsCount(caseEntity.getDocuments() != null ? caseEntity.getDocuments().size() : 0);
+        // Use efficient count queries for single entity lookups
+        response.setNotesCount((int) noteRepository.countByCaseEntityId(caseEntity.getId()));
+        response.setDocumentsCount((int) documentRepository.countByCaseEntityId(caseEntity.getId()));
+
+        return response;
+    }
+
+    // Overloaded version for batch operations - uses pre-loaded counts
+    private CaseResponse mapToResponse(Case caseEntity, Map<Long, Long> noteCounts, Map<Long, Long> docCounts) {
+        CaseResponse response = new CaseResponse();
+        response.setId(caseEntity.getId());
+        response.setTitle(caseEntity.getTitle());
+        response.setDescription(caseEntity.getDescription());
+        response.setStatus(caseEntity.getStatus());
+        response.setPriority(caseEntity.getPriority());
+        response.setCreatedAt(caseEntity.getCreatedAt());
+        response.setUpdatedAt(caseEntity.getUpdatedAt());
+
+        if (caseEntity.getAssignedUser() != null) {
+            UserSummaryDto userSummary = new UserSummaryDto();
+            userSummary.setId(caseEntity.getAssignedUser().getId());
+            userSummary.setUsername(caseEntity.getAssignedUser().getUsername());
+            userSummary.setEmail(caseEntity.getAssignedUser().getEmail());
+            response.setAssignedUser(userSummary);
+        }
+
+        if (caseEntity.getClient() != null) {
+            ClientSummaryDto clientSummary = new ClientSummaryDto();
+            clientSummary.setId(caseEntity.getClient().getId());
+            clientSummary.setFirstname(caseEntity.getClient().getFirstname());
+            clientSummary.setLastname(caseEntity.getClient().getLastname());
+            clientSummary.setEmail(caseEntity.getClient().getEmail());
+            clientSummary.setCompany(caseEntity.getClient().getCompany());
+            response.setClient(clientSummary);
+        }
+
+        // Use pre-loaded counts from batch query
+        response.setNotesCount(noteCounts.getOrDefault(caseEntity.getId(), 0L).intValue());
+        response.setDocumentsCount(docCounts.getOrDefault(caseEntity.getId(), 0L).intValue());
 
         return response;
     }

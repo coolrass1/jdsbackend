@@ -23,35 +23,42 @@ public class NoteController {
     private final NoteService noteService;
 
     @PostMapping
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
     public ResponseEntity<NoteResponse> createNote(@Valid @RequestBody NoteCreateRequest request) {
         NoteResponse response = noteService.createNote(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
     public ResponseEntity<NoteResponse> getNoteById(@PathVariable Long id) {
         NoteResponse response = noteService.getNoteById(id);
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping
+    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
+    public ResponseEntity<List<NoteResponse>> getAllNotes() {
+        List<NoteResponse> notes = noteService.getAllNotes();
+        return ResponseEntity.ok(notes);
+    }
+
     @GetMapping("/case/{caseId}")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
     public ResponseEntity<List<NoteResponse>> getNotesByCaseId(@PathVariable Long caseId) {
         List<NoteResponse> notes = noteService.getNotesByCaseId(caseId);
         return ResponseEntity.ok(notes);
     }
 
     @GetMapping("/author/{authorId}")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
     public ResponseEntity<List<NoteResponse>> getNotesByAuthor(@PathVariable Long authorId) {
         List<NoteResponse> notes = noteService.getNotesByAuthor(authorId);
         return ResponseEntity.ok(notes);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
     public ResponseEntity<NoteResponse> updateNote(
             @PathVariable Long id,
             @Valid @RequestBody NoteUpdateRequest request) {
@@ -60,7 +67,7 @@ public class NoteController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
     public ResponseEntity<MessageResponse> deleteNote(@PathVariable Long id) {
         noteService.deleteNote(id);
         return ResponseEntity.ok(new MessageResponse("Note deleted successfully"));
