@@ -7,6 +7,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,6 +22,12 @@ public class CaseUpdateRequest {
     private CaseStatus status;
 
     private CasePriority priority;
+
+    private Boolean idChecked;
+
+    private String idCheckedComment;
+
+    private LocalDateTime dueDate;
 
     private Long assignedUserId;
 

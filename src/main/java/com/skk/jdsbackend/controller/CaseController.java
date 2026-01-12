@@ -21,7 +21,7 @@ public class CaseController {
     private final CaseService caseService;
 
     @PostMapping
-    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('CASE_WRITE')")
     public ResponseEntity<CaseResponse> createCase(@Valid @RequestBody CaseCreateRequest request) {
         CaseResponse response = caseService.createCase(request);
         System.out.println("Case created successfully: " + response);
@@ -29,14 +29,14 @@ public class CaseController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('CASE_READ')")
     public ResponseEntity<CaseResponse> getCaseById(@PathVariable Long id) {
         CaseResponse response = caseService.getCaseById(id);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('CASE_READ')")
     public ResponseEntity<List<CaseResponse>> getAllCases() {
         List<CaseResponse> cases = caseService.getAllCases();
         return ResponseEntity.ok(cases);

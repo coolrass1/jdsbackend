@@ -28,6 +28,7 @@ public class CaseService {
     private final ClientRepository clientRepository;
     private final NoteRepository noteRepository;
     private final DocumentRepository documentRepository;
+    private final ActivityService activityService;
 
     @Transactional
     public CaseResponse createCase(CaseCreateRequest request) {
@@ -52,6 +53,16 @@ public class CaseService {
         }
 
         Case savedCase = caseRepository.save(caseEntity);
+        
+        // Log activity
+        activityService.logActivity(
+            "case_created",
+            "CASE",
+            savedCase.getId(),
+            savedCase.getId(),
+            String.format("Created case: %s (Priority: %s)", request.getTitle(), request.getPriority())
+        );
+        
         return mapToResponse(savedCase);
     }
 
@@ -136,6 +147,15 @@ public class CaseService {
         if (request.getPriority() != null) {
             caseEntity.setPriority(request.getPriority());
         }
+        if (request.getIdChecked() != null) {
+            caseEntity.setIdChecked(request.getIdChecked());
+        }
+        if (request.getIdCheckedComment() != null) {
+            caseEntity.setIdCheckedComment(request.getIdCheckedComment());
+        }
+        if (request.getDueDate() != null) {
+            caseEntity.setDueDate(request.getDueDate());
+        }
         if (request.getAssignedUserId() != null) {
             User assignedUser = userRepository.findById(request.getAssignedUserId())
                     .orElseThrow(() -> new ResourceNotFoundException(
@@ -204,6 +224,9 @@ public class CaseService {
         response.setDescription(caseEntity.getDescription());
         response.setStatus(caseEntity.getStatus());
         response.setPriority(caseEntity.getPriority());
+        response.setIdChecked(caseEntity.getIdChecked());
+        response.setIdCheckedComment(caseEntity.getIdCheckedComment());
+        response.setDueDate(caseEntity.getDueDate());
         response.setCreatedAt(caseEntity.getCreatedAt());
         response.setUpdatedAt(caseEntity.getUpdatedAt());
 

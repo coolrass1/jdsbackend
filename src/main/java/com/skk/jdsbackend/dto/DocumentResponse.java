@@ -16,5 +16,15 @@ public class DocumentResponse {
     private String fileType;
     private Long fileSize;
     private Long caseId;
+    private Integer currentVersion;
+    private String description;
+    private String ocrText;
+    private Boolean isTemplateBased;
+    private Long templateId;
+    private String templateName;
+    private String uploadedByUsername;
+    private Integer totalVersions;
+    private Integer pendingSignatures;
     private LocalDateTime uploadedAt;
+    private LocalDateTime updatedAt;
 }

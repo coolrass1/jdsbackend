@@ -38,6 +38,15 @@ public class Case {
     @Column(nullable = false)
     private CasePriority priority = CasePriority.MEDIUM;
 
+    @Column(name = "id_checked", nullable = false)
+    private Boolean idChecked = false;
+
+    @Column(name = "id_checked_comment", columnDefinition = "TEXT")
+    private String idCheckedComment;
+
+    @Column(name = "due_date", nullable = true)
+    private LocalDateTime dueDate;
+
     // Many-to-One: Case → User (assigned user)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_user_id")

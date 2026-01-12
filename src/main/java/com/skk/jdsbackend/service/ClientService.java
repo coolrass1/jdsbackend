@@ -30,9 +30,14 @@ public class ClientService {
         client.setFirstname(request.getFirstname());
         client.setLastname(request.getLastname());
         client.setEmail(request.getEmail());
+        client.setNi_number(request.getNi_number());
         client.setPhone(request.getPhone());
         client.setAddress(request.getAddress());
         client.setCompany(request.getCompany());
+        client.setOccupation(request.getOccupation());
+        client.setAdditionalNote(request.getAdditionalNote());
+        client.setHasConflictOfInterest(request.getHasConflictOfInterest() != null ? request.getHasConflictOfInterest() : false);
+        client.setConflictOfInterestComment(request.getConflictOfInterestComment());
 
         Client savedClient = clientRepository.save(client);
         return mapToResponse(savedClient);
@@ -78,6 +83,9 @@ public class ClientService {
             }
             client.setEmail(request.getEmail());
         }
+        if (request.getNi_number() != null) {
+            client.setNi_number(request.getNi_number());
+        }
         if (request.getPhone() != null) {
             client.setPhone(request.getPhone());
         }
@@ -86,6 +94,18 @@ public class ClientService {
         }
         if (request.getCompany() != null) {
             client.setCompany(request.getCompany());
+        }
+        if (request.getOccupation() != null) {
+            client.setOccupation(request.getOccupation());
+        }
+        if (request.getAdditionalNote() != null) {
+            client.setAdditionalNote(request.getAdditionalNote());
+        }
+        if (request.getHasConflictOfInterest() != null) {
+            client.setHasConflictOfInterest(request.getHasConflictOfInterest());
+        }
+        if (request.getConflictOfInterestComment() != null) {
+            client.setConflictOfInterestComment(request.getConflictOfInterestComment());
         }
 
         Client updatedClient = clientRepository.save(client);
@@ -112,9 +132,14 @@ public class ClientService {
         response.setFirstname(client.getFirstname());
         response.setLastname(client.getLastname());
         response.setEmail(client.getEmail());
+        response.setNi_number(client.getNi_number());
         response.setPhone(client.getPhone());
         response.setAddress(client.getAddress());
         response.setCompany(client.getCompany());
+        response.setOccupation(client.getOccupation());
+        response.setAdditionalNote(client.getAdditionalNote());
+        response.setHasConflictOfInterest(client.getHasConflictOfInterest());
+        response.setConflictOfInterestComment(client.getConflictOfInterestComment());
         response.setCasesCount(client.getCases() != null ? client.getCases().size() : 0);
         response.setCreatedAt(client.getCreatedAt());
         response.setUpdatedAt(client.getUpdatedAt());

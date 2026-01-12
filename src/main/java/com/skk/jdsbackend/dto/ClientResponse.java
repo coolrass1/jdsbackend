@@ -16,9 +16,14 @@ public class ClientResponse {
     private String firstname;
     private String lastname;
     private String email;
+    private String ni_number;
     private String phone;
     private String address;
     private String company;
+    private String occupation;
+    private String additionalNote;
+    private Boolean hasConflictOfInterest;
+    private String conflictOfInterestComment;
     private Integer casesCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

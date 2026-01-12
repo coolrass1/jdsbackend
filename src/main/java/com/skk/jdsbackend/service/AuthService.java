@@ -89,6 +89,7 @@ public class AuthService {
         return new AuthResponse(
                 jwt,
                 refreshToken.getToken(),
+                userDetails.getId(),
                 userDetails.getUsername(),
                 userDetails.getEmail(),
                 roles);
@@ -110,6 +111,7 @@ public class AuthService {
                     return new AuthResponse(
                             token,
                             refreshToken.getToken(),
+                            user.getId(),
                             user.getUsername(),
                             user.getEmail(),
                             roles);

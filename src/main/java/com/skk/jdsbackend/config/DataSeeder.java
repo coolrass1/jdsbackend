@@ -1,10 +1,7 @@
 package com.skk.jdsbackend.config;
 
 import com.skk.jdsbackend.entity.*;
-import com.skk.jdsbackend.repository.CaseRepository;
-import com.skk.jdsbackend.repository.ClientRepository;
-import com.skk.jdsbackend.repository.UserRepository;
-import com.skk.jdsbackend.repository.TaskRepository;
+import com.skk.jdsbackend.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -12,330 +9,261 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 
 @Component
-@ConditionalOnProperty(name = "app.data.seed-enabled", havingValue = "true")
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "app.data.seed-enabled", havingValue = "true", matchIfMissing = false)
 public class DataSeeder implements CommandLineRunner {
 
-        private final UserRepository userRepository;
-        private final ClientRepository clientRepository;
-        private final CaseRepository caseRepository;
-        private final TaskRepository taskRepository;
-        private final PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
+    private final ClientRepository clientRepository;
+    private final CaseRepository caseRepository;
+    private final TaskRepository taskRepository;
+    private final PasswordEncoder passwordEncoder;
 
-        private final Random random = new Random();
+    @Override
+    public void run(String... args) throws Exception {
+        log.info("Starting data seeding...");
 
-        @Override
-        public void run(String... args) {
-                // Only seed if database is empty
-                if (userRepository.count() > 0 && taskRepository.count() > 0) {
-                        log.info("Database already contains data. Skipping seeding.");
-                        return;
-                }
+        // Seed users
+        List<User> users = seedUsers();
 
-                log.info("Starting database seeding...");
+        // Seed clients
+        List<Client> clients = seedClients();
 
-                List<User> users;
-                // Seed users if not exists
-                if (userRepository.count() == 0) {
-                        users = seedUsers();
-                        log.info("Created {} users", users.size());
-                } else {
-                        users = userRepository.findAll();
-                        log.info("Found {} existing users", users.size());
-                }
+        // Seed cases
+        List<Case> cases = seedCases(users, clients);
 
-                List<Client> clients;
-                // Seed clients if not exists
-                if (clientRepository.count() == 0) {
-                        clients = seedClients();
-                        log.info("Created {} clients", clients.size());
-                } else {
-                        clients = clientRepository.findAll();
-                        log.info("Found {} existing clients", clients.size());
-                }
+        // Seed tasks
+        seedTasks(cases, users);
 
-                List<Case> cases;
-                // Seed cases if not exists
-                if (caseRepository.count() == 0) {
-                        cases = seedCases(users, clients);
-                        log.info("Created {} cases", cases.size());
-                } else {
-                        cases = caseRepository.findAll();
-                        log.info("Found {} existing cases", cases.size());
-                }
+        log.info("Data seeding completed successfully!");
+        log.info("=".repeat(60));
+        log.info("DEFAULT LOGIN CREDENTIALS:");
+        log.info("  Username: admin | Password: password123");
+        log.info("  Username: caseworker | Password: password123");
+        log.info("=".repeat(60));
+    }
 
-                // Seed tasks
-                if (taskRepository.count() == 0) {
-                        List<Task> tasks = seedTasks(cases, users);
-                        log.info("Created {} tasks", tasks.size());
-                }
+    private List<User> seedUsers() {
+        List<User> users = new ArrayList<>();
+        
+        if (userRepository.count() == 0) {
+            log.info("Seeding users...");
 
-                log.info("Database seeding completed successfully!");
-                logCredentials(users);
+            // Create admin user
+            User admin = new User();
+            admin.setUsername("admin");
+            admin.setEmail("admin@jds.com");
+            admin.setPassword(passwordEncoder.encode("password123"));
+            Set<Role> adminRoles = new HashSet<>();
+            adminRoles.add(Role.ADMIN);
+            adminRoles.add(Role.CASE_WORKER);
+            admin.setRoles(adminRoles);
+            users.add(userRepository.save(admin));
+            log.info("Created admin user - username: admin, password: password123");
+
+            // Create case worker user
+            User caseWorker = new User();
+            caseWorker.setUsername("caseworker");
+            caseWorker.setEmail("caseworker@jds.com");
+            caseWorker.setPassword(passwordEncoder.encode("password123"));
+            Set<Role> cwRoles = new HashSet<>();
+            cwRoles.add(Role.CASE_WORKER);
+            caseWorker.setRoles(cwRoles);
+            users.add(userRepository.save(caseWorker));
+            log.info("Created case worker user - username: caseworker, password: password123");
+
+            log.info("Users seeded successfully!");
+        } else {
+            log.info("Users already exist, skipping user seeding.");
+            users = userRepository.findAll();
         }
+        
+        return users;
+    }
 
-        private List<User> seedUsers() {
-                List<User> users = new ArrayList<>();
+    private List<Client> seedClients() {
+        List<Client> clients = new ArrayList<>();
+        
+        if (clientRepository.count() == 0) {
+            log.info("Seeding clients...");
 
-                // Admin user
-                User admin = new User();
-                admin.setUsername("admin");
-                admin.setEmail("admin@jds.com");
-                admin.setPassword(passwordEncoder.encode("password123"));
-                Set<Role> adminRoles = new HashSet<>();
-                adminRoles.add(Role.ADMIN);
-                admin.setRoles(adminRoles);
-                users.add(userRepository.save(admin));
+            // Create sample clients
+            Client client1 = new Client();
+            client1.setFirstname("John");
+            client1.setLastname("Smith");
+            client1.setEmail("john.smith@example.com");
+            client1.setNi_number("AB123456A");
+            client1.setPhone("+44-20-7123-4567");
+            client1.setAddress("123 High Street, London, UK");
+            client1.setCompany("Tech Solutions Ltd");
+            client1.setHasConflictOfInterest(false);
+            clients.add(clientRepository.save(client1));
 
-                // Supervisor user
-                User supervisor = new User();
-                supervisor.setUsername("supervisor");
-                supervisor.setEmail("supervisor@jds.com");
-                supervisor.setPassword(passwordEncoder.encode("password123"));
-                Set<Role> supervisorRoles = new HashSet<>();
-                supervisorRoles.add(Role.SUPERVISOR);
-                supervisor.setRoles(supervisorRoles);
-                users.add(userRepository.save(supervisor));
+            Client client2 = new Client();
+            client2.setFirstname("Sarah");
+            client2.setLastname("Johnson");
+            client2.setEmail("sarah.johnson@example.com");
+            client2.setNi_number("CD789012B");
+            client2.setPhone("+44-20-7234-5678");
+            client2.setAddress("456 Park Lane, Manchester, UK");
+            client2.setCompany("Marketing Pro");
+            client2.setHasConflictOfInterest(false);
+            clients.add(clientRepository.save(client2));
 
-                // Case workers
-                String[] workerNames = { "john_doe", "jane_smith", "mike_wilson" };
-                String[] workerEmails = { "john.doe@jds.com", "jane.smith@jds.com", "mike.wilson@jds.com" };
+            Client client3 = new Client();
+            client3.setFirstname("Michael");
+            client3.setLastname("Brown");
+            client3.setEmail("michael.brown@example.com");
+            client3.setNi_number("EF345678C");
+            client3.setPhone("+44-20-7345-6789");
+            client3.setAddress("789 Queen Street, Birmingham, UK");
+            client3.setCompany("Consulting Group");
+            client3.setHasConflictOfInterest(true);
+            client3.setConflictOfInterestComment("Previously worked with competing firm");
+            clients.add(clientRepository.save(client3));
 
-                for (int i = 0; i < workerNames.length; i++) {
-                        User worker = new User();
-                        worker.setUsername(workerNames[i]);
-                        worker.setEmail(workerEmails[i]);
-                        worker.setPassword(passwordEncoder.encode("password123"));
-                        Set<Role> workerRoles = new HashSet<>();
-                        workerRoles.add(Role.CASE_WORKER);
-                        worker.setRoles(workerRoles);
-                        users.add(userRepository.save(worker));
-                }
-
-                return users;
+            log.info("Clients seeded successfully!");
+        } else {
+            log.info("Clients already exist, skipping client seeding.");
+            clients = clientRepository.findAll();
         }
+        
+        return clients;
+    }
 
-        private List<Client> seedClients() {
-                List<Client> clients = new ArrayList<>();
+    private List<Case> seedCases(List<User> users, List<Client> clients) {
+        List<Case> cases = new ArrayList<>();
+        
+        if (caseRepository.count() == 0) {
+            log.info("Seeding cases...");
 
-                String[][] clientData = {
-                                { "James", "Anderson", "james.anderson@email.com", "+1-555-0101",
-                                                "123 Main St, New York, NY 10001",
-                                                "Tech Solutions Inc" },
-                                { "Sarah", "Martinez", "sarah.martinez@email.com", "+1-555-0102",
-                                                "456 Oak Ave, Los Angeles, CA 90001",
-                                                "Marketing Pro" },
-                                { "Robert", "Johnson", "robert.johnson@email.com", "+1-555-0103",
-                                                "789 Pine Rd, Chicago, IL 60601",
-                                                "Johnson & Associates" },
-                                { "Emily", "Williams", "emily.williams@email.com", "+1-555-0104",
-                                                "321 Elm St, Houston, TX 77001",
-                                                null },
-                                { "Michael", "Brown", "michael.brown@email.com", "+1-555-0105",
-                                                "654 Maple Dr, Phoenix, AZ 85001",
-                                                "Brown Enterprises" },
-                                { "Jessica", "Davis", "jessica.davis@email.com", "+1-555-0106",
-                                                "987 Cedar Ln, Philadelphia, PA 19101",
-                                                null },
-                                { "David", "Miller", "david.miller@email.com", "+1-555-0107",
-                                                "147 Birch Blvd, San Antonio, TX 78201",
-                                                "Miller Corp" },
-                                { "Jennifer", "Wilson", "jennifer.wilson@email.com", "+1-555-0108",
-                                                "258 Spruce St, San Diego, CA 92101", "Wilson Legal" },
-                                { "Christopher", "Moore", "christopher.moore@email.com", "+1-555-0109",
-                                                "369 Walnut Ave, Dallas, TX 75201", null },
-                                { "Amanda", "Taylor", "amanda.taylor@email.com", "+1-555-0110",
-                                                "741 Ash Rd, San Jose, CA 95101",
-                                                "Taylor Consulting" }
-                };
+            // Get case workers only
+            List<User> caseWorkers = users.stream()
+                    .filter(user -> user.getRoles().contains(Role.CASE_WORKER))
+                    .toList();
 
-                for (String[] data : clientData) {
-                        Client client = new Client();
-                        client.setFirstname(data[0]);
-                        client.setLastname(data[1]);
-                        client.setEmail(data[2]);
-                        client.setPhone(data[3]);
-                        client.setAddress(data[4]);
-                        client.setCompany(data[5]);
-                        clients.add(clientRepository.save(client));
-                }
+            // Case 1
+            Case case1 = new Case();
+            case1.setTitle("Contract Dispute Resolution");
+            case1.setDescription("Client needs assistance with contract interpretation and potential breach of agreement.");
+            case1.setStatus(CaseStatus.OPEN);
+            case1.setPriority(CasePriority.HIGH);
+            case1.setClient(clients.get(0));
+            case1.setAssignedUser(caseWorkers.get(0));
+            cases.add(caseRepository.save(case1));
 
-                return clients;
+            // Case 2
+            Case case2 = new Case();
+            case2.setTitle("Employment Termination Review");
+            case2.setDescription("Review of employment termination circumstances and potential wrongful dismissal claim.");
+            case2.setStatus(CaseStatus.IN_PROGRESS);
+            case2.setPriority(CasePriority.URGENT);
+            case2.setClient(clients.get(1));
+            case2.setAssignedUser(caseWorkers.get(0));
+            cases.add(caseRepository.save(case2));
+
+            // Case 3
+            Case case3 = new Case();
+            case3.setTitle("Business Partnership Dissolution");
+            case3.setDescription("Legal guidance for dissolving business partnership and asset distribution.");
+            case3.setStatus(CaseStatus.PENDING);
+            case3.setPriority(CasePriority.MEDIUM);
+            case3.setClient(clients.get(2));
+            case3.setAssignedUser(caseWorkers.size() > 1 ? caseWorkers.get(1) : caseWorkers.get(0));
+            cases.add(caseRepository.save(case3));
+
+            // Case 4
+            Case case4 = new Case();
+            case4.setTitle("Intellectual Property Protection");
+            case4.setDescription("Copyright and trademark registration for new business venture.");
+            case4.setStatus(CaseStatus.OPEN);
+            case4.setPriority(CasePriority.LOW);
+            case4.setClient(clients.get(0));
+            case4.setAssignedUser(caseWorkers.get(0));
+            cases.add(caseRepository.save(case4));
+
+            log.info("Cases seeded successfully!");
+        } else {
+            log.info("Cases already exist, skipping case seeding.");
+            cases = caseRepository.findAll();
         }
+        
+        return cases;
+    }
 
-        private List<Case> seedCases(List<User> users, List<Client> clients) {
-                List<Case> cases = new ArrayList<>();
+    private void seedTasks(List<Case> cases, List<User> users) {
+        if (taskRepository.count() == 0) {
+            log.info("Seeding tasks...");
 
-                String[][] caseData = {
-                                { "Contract Dispute Resolution",
-                                                "Client needs assistance with contract interpretation and potential breach of agreement.",
-                                                "OPEN", "HIGH" },
-                                { "Employment Termination Review",
-                                                "Review of employment termination circumstances and potential wrongful dismissal claim.",
-                                                "IN_PROGRESS", "URGENT" },
-                                { "Property Lease Agreement",
-                                                "Assistance with commercial property lease negotiation and terms review.",
-                                                "OPEN", "MEDIUM" },
-                                { "Business Partnership Dissolution",
-                                                "Legal guidance for dissolving business partnership and asset distribution.",
-                                                "IN_PROGRESS",
-                                                "HIGH" },
-                                { "Intellectual Property Protection",
-                                                "Copyright and trademark registration for new business venture.",
-                                                "PENDING", "MEDIUM" },
-                                { "Debt Collection Matter",
-                                                "Assistance with collecting outstanding business debts from multiple parties.",
-                                                "OPEN", "LOW" },
-                                { "Regulatory Compliance Review",
-                                                "Review of business operations for regulatory compliance in new jurisdiction.",
-                                                "RESOLVED",
-                                                "MEDIUM" },
-                                { "Merger and Acquisition Due Diligence",
-                                                "Legal due diligence for potential company acquisition.",
-                                                "IN_PROGRESS", "URGENT" },
-                                { "Employment Contract Drafting",
-                                                "Drafting employment contracts for new executive hires.", "OPEN",
-                                                "MEDIUM" },
-                                { "Vendor Agreement Negotiation",
-                                                "Negotiation and review of vendor service agreements.", "PENDING",
-                                                "LOW" },
-                                { "Real Estate Transaction",
-                                                "Legal support for commercial real estate purchase transaction.",
-                                                "IN_PROGRESS", "HIGH" },
-                                { "Non-Compete Agreement Review",
-                                                "Review and advice on non-compete clause enforceability.", "CLOSED",
-                                                "MEDIUM" },
-                                { "Corporate Governance Advisory",
-                                                "Advisory services for corporate governance best practices.", "OPEN",
-                                                "LOW" },
-                                { "Shareholder Dispute Mediation",
-                                                "Mediation services for shareholder disagreement resolution.",
-                                                "IN_PROGRESS", "URGENT" },
-                                { "Data Privacy Compliance",
-                                                "GDPR and data privacy compliance assessment and implementation.",
-                                                "OPEN",
-                                                "HIGH" },
-                                { "Franchise Agreement Review", "Review of franchise agreement terms and conditions.",
-                                                "PENDING",
-                                                "MEDIUM" },
-                                { "Insurance Claim Assistance",
-                                                "Assistance with business insurance claim processing and negotiation.",
-                                                "RESOLVED", "MEDIUM" },
-                                { "Tax Planning Consultation",
-                                                "Legal consultation for business tax planning strategies.", "OPEN",
-                                                "LOW" },
-                                { "Licensing Agreement Drafting",
-                                                "Drafting software licensing agreements for product distribution.",
-                                                "IN_PROGRESS", "MEDIUM" },
-                                { "Litigation Support Services",
-                                                "Document review and legal research for ongoing litigation.", "OPEN",
-                                                "HIGH" }
-                };
+            // Get case workers only
+            List<User> caseWorkers = users.stream()
+                    .filter(user -> user.getRoles().contains(Role.CASE_WORKER))
+                    .toList();
 
-                // Get only case workers for assignment (skip admin and supervisor)
-                List<User> caseWorkers = users.stream()
-                                .filter(user -> user.getRoles().contains(Role.CASE_WORKER))
-                                .toList();
+            // Tasks for Case 1
+            Task task1 = new Task();
+            task1.setTitle("Review Initial Documents");
+            task1.setDescription("Review all preliminary documents provided by the client.");
+            task1.setStatus(TaskStatus.TODO);
+            task1.setPriority(TaskPriority.HIGH);
+            task1.setDueDate(LocalDate.now().plusDays(3));
+            task1.setCaseEntity(cases.get(0));
+            task1.setAssignedUser(caseWorkers.get(0));
+            taskRepository.save(task1);
 
-                for (int i = 0; i < caseData.length; i++) {
-                        String[] data = caseData[i];
-                        Case caseEntity = new Case();
-                        caseEntity.setTitle(data[0]);
-                        caseEntity.setDescription(data[1]);
-                        caseEntity.setStatus(CaseStatus.valueOf(data[2]));
-                        caseEntity.setPriority(CasePriority.valueOf(data[3]));
+            Task task2 = new Task();
+            task2.setTitle("Draft Client Letter");
+            task2.setDescription("Draft a formal letter to the client regarding the case status.");
+            task2.setStatus(TaskStatus.IN_PROGRESS);
+            task2.setPriority(TaskPriority.MEDIUM);
+            task2.setDueDate(LocalDate.now().plusDays(5));
+            task2.setCaseEntity(cases.get(0));
+            task2.setAssignedUser(caseWorkers.get(0));
+            taskRepository.save(task2);
 
-                        // Assign to a random case worker
-                        caseEntity.setAssignedUser(caseWorkers.get(random.nextInt(caseWorkers.size())));
+            // Tasks for Case 2
+            Task task3 = new Task();
+            task3.setTitle("Research Case Law");
+            task3.setDescription("Conduct research on relevant case law and precedents.");
+            task3.setStatus(TaskStatus.COMPLETED);
+            task3.setPriority(TaskPriority.HIGH);
+            task3.setDueDate(LocalDate.now().minusDays(1));
+            task3.setCaseEntity(cases.get(1));
+            task3.setAssignedUser(caseWorkers.get(0));
+            taskRepository.save(task3);
 
-                        // Assign to a random client
-                        caseEntity.setClient(clients.get(random.nextInt(clients.size())));
+            Task task4 = new Task();
+            task4.setTitle("Schedule Deposition");
+            task4.setDescription("Coordinate with opposing counsel to schedule depositions.");
+            task4.setStatus(TaskStatus.IN_PROGRESS);
+            task4.setPriority(TaskPriority.URGENT);
+            task4.setDueDate(LocalDate.now().plusDays(2));
+            task4.setCaseEntity(cases.get(1));
+            task4.setAssignedUser(caseWorkers.get(0));
+            taskRepository.save(task4);
 
-                        cases.add(caseRepository.save(caseEntity));
-                }
+            // Tasks for Case 3
+            Task task5 = new Task();
+            task5.setTitle("Client Meeting");
+            task5.setDescription("Meet with the client to discuss strategy and next steps.");
+            task5.setStatus(TaskStatus.TODO);
+            task5.setPriority(TaskPriority.MEDIUM);
+            task5.setDueDate(LocalDate.now().plusDays(7));
+            task5.setCaseEntity(cases.get(2));
+            task5.setAssignedUser(caseWorkers.size() > 1 ? caseWorkers.get(1) : caseWorkers.get(0));
+            taskRepository.save(task5);
 
-                return cases;
+            log.info("Tasks seeded successfully!");
+        } else {
+            log.info("Tasks already exist, skipping task seeding.");
         }
-
-        private List<Task> seedTasks(List<Case> cases, List<User> users) {
-                List<Task> tasks = new ArrayList<>();
-
-                String[][] taskTitles = {
-                                { "Review Initial Documents",
-                                                "Review all preliminary documents provided by the client." },
-                                { "Draft Client Letter",
-                                                "Draft a formal letter to the client regarding the case status." },
-                                { "File Court Motions", "Prepare and file necessary motions with the court." },
-                                { "Schedule Deposition", "Coordinate with opposing counsel to schedule depositions." },
-                                { "Research Case Law", "Conduct research on relevant case law and precedents." },
-                                { "Prepare Witness List", "Compile a list of potential witnesses for the trial." },
-                                { "Review Settlement Offer",
-                                                "Analyze the settlement offer received from the opposing party." },
-                                { "Attend Hearing", "Represent the client at the scheduled court hearing." },
-                                { "Update Case File", "Ensure all recent correspondence and documents are filed." },
-                                { "Client Meeting", "Meet with the client to discuss strategy and next steps." }
-                };
-
-                // Get only case workers
-                List<User> caseWorkers = users.stream()
-                                .filter(user -> user.getRoles().contains(Role.CASE_WORKER))
-                                .toList();
-
-                for (Case caseEntity : cases) {
-                        // Create 2-4 tasks for each case
-                        int numTasks = random.nextInt(3) + 2;
-
-                        for (int i = 0; i < numTasks; i++) {
-                                String[] titleDesc = taskTitles[random.nextInt(taskTitles.length)];
-                                Task task = new Task();
-                                task.setTitle(titleDesc[0] + " - " + caseEntity.getTitle().substring(0,
-                                                Math.min(10, caseEntity.getTitle().length())) + "...");
-                                task.setDescription(titleDesc[1]);
-
-                                // Random status and priority
-                                TaskStatus[] statuses = TaskStatus.values();
-                                task.setStatus(statuses[random.nextInt(statuses.length)]);
-
-                                TaskPriority[] priorities = TaskPriority.values();
-                                task.setPriority(priorities[random.nextInt(priorities.length)]);
-
-                                // Due date +/- 10 days from now
-                                task.setDueDate(java.time.LocalDate.now().plusDays(random.nextInt(21) - 10));
-
-                                task.setCaseEntity(caseEntity);
-
-                                // Assign to the case's user or random worker
-                                if (random.nextBoolean() && caseEntity.getAssignedUser() != null) {
-                                        task.setAssignedUser(caseEntity.getAssignedUser());
-                                } else {
-                                        task.setAssignedUser(caseWorkers.get(random.nextInt(caseWorkers.size())));
-                                }
-
-                                tasks.add(taskRepository.save(task));
-                        }
-                }
-
-                return tasks;
-        }
-
-        private void logCredentials(List<User> users) {
-                log.info("=".repeat(60));
-                log.info("SEEDED USER CREDENTIALS (Password for all: password123)");
-                log.info("=".repeat(60));
-                for (User user : users) {
-                        log.info("Username: {} | Email: {} | Roles: {}",
-                                        user.getUsername(),
-                                        user.getEmail(),
-                                        user.getRoles());
-                }
-                log.info("=".repeat(60));
-        }
+    }
 }

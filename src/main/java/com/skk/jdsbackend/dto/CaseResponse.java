@@ -18,6 +18,9 @@ public class CaseResponse {
     private String description;
     private CaseStatus status;
     private CasePriority priority;
+    private Boolean idChecked;
+    private String idCheckedComment;
+    private LocalDateTime dueDate;
     private UserSummaryDto assignedUser;
     private ClientSummaryDto client;
     private Integer notesCount;

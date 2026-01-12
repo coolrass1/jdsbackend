@@ -24,7 +24,7 @@ public class DocumentController {
     private final DocumentService documentService;
 
     @PostMapping("/upload")
-    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('DOCUMENT_WRITE')")
     public ResponseEntity<DocumentResponse> uploadDocument(
             @RequestParam("caseId") Long caseId,
             @RequestParam("file") MultipartFile file) {
@@ -33,21 +33,21 @@ public class DocumentController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('DOCUMENT_READ')")
     public ResponseEntity<DocumentResponse> getDocumentById(@PathVariable Long id) {
         DocumentResponse response = documentService.getDocumentById(id);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/case/{caseId}")
-    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('DOCUMENT_READ')")
     public ResponseEntity<List<DocumentResponse>> getDocumentsByCaseId(@PathVariable Long caseId) {
         List<DocumentResponse> documents = documentService.getDocumentsByCaseId(caseId);
         return ResponseEntity.ok(documents);
     }
 
     @GetMapping("/download/{id}")
-    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('DOCUMENT_READ')")
     public ResponseEntity<Resource> downloadDocument(@PathVariable Long id) {
         DocumentResponse documentInfo = documentService.getDocumentById(id);
         Resource resource = documentService.downloadDocument(id);
@@ -60,9 +60,27 @@ public class DocumentController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('DOCUMENT_DELETE')")
     public ResponseEntity<MessageResponse> deleteDocument(@PathVariable Long id) {
         documentService.deleteDocument(id);
         return ResponseEntity.ok(new MessageResponse("Document deleted successfully"));
+    }
+
+    /**
+     * GET /api/documents/preview/{id}
+     * Preview document (inline display for PDFs and images)
+     */
+    @GetMapping("/preview/{id}")
+    @PreAuthorize("hasAuthority('DOCUMENT_READ')")
+    public ResponseEntity<Resource> previewDocument(@PathVariable Long id) {
+        DocumentResponse documentInfo = documentService.getDocumentById(id);
+        Resource resource = documentService.downloadDocument(id);
+
+        // Set content disposition to inline for browser preview
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(documentInfo.getFileType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"" + documentInfo.getFileName() + "\"")
+                .body(resource);
     }
 }

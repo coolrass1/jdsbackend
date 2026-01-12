@@ -20,6 +20,9 @@ public class ClientUpdateRequest {
     @Email(message = "Email must be valid")
     private String email;
 
+    @Size(max = 20, message = "NI number must not exceed 20 characters")
+    private String ni_number;
+
     @Size(max = 20, message = "Phone must not exceed 20 characters")
     private String phone;
 
@@ -27,4 +30,13 @@ public class ClientUpdateRequest {
 
     @Size(max = 100, message = "Company must not exceed 100 characters")
     private String company;
+
+    @Size(max = 100, message = "Occupation must not exceed 100 characters")
+    private String occupation;
+
+    private String additionalNote;
+
+    private Boolean hasConflictOfInterest;
+
+    private String conflictOfInterestComment;
 }

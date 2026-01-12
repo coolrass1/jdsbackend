@@ -21,6 +21,7 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final CaseRepository caseRepository;
     private final UserRepository userRepository;
+    private final ActivityService activityService;
 
     @Transactional
     public TaskResponse createTask(TaskCreateRequest request) {
@@ -41,6 +42,19 @@ public class TaskService {
         task.setAssignedUser(assignedUser);
 
         Task savedTask = taskRepository.save(task);
+        
+        // Log activity
+        activityService.logActivity(
+            "task_created",
+            "TASK",
+            savedTask.getId(),
+            request.getCaseId(),
+            String.format("Created task: %s (Priority: %s, Due: %s)", 
+                request.getTitle(), 
+                task.getPriority(), 
+                task.getDueDate() != null ? task.getDueDate().toString() : "No due date")
+        );
+        
         return mapToResponse(savedTask);
     }
 
@@ -114,15 +128,37 @@ public class TaskService {
         }
 
         Task updatedTask = taskRepository.save(task);
+        
+        // Log activity
+        activityService.logActivity(
+            "task_updated",
+            "TASK",
+            id,
+            task.getCaseEntity().getId(),
+            String.format("Updated task: %s (Status: %s)", task.getTitle(), task.getStatus())
+        );
+        
         return mapToResponse(updatedTask);
     }
 
     @Transactional
     public void deleteTask(Long id) {
-        if (!taskRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Task not found with id: " + id);
-        }
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found with id: " + id));
+        
+        String taskTitle = task.getTitle();
+        Long caseId = task.getCaseEntity() != null ? task.getCaseEntity().getId() : null;
+        
         taskRepository.deleteById(id);
+        
+        // Log activity
+        activityService.logActivity(
+            "task_deleted",
+            "TASK",
+            id,
+            caseId,
+            String.format("Deleted task: %s", taskTitle)
+        );
     }
 
     private TaskResponse mapToResponse(Task task) {

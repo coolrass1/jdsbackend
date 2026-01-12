@@ -38,6 +38,11 @@ public class Client {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @NotBlank
+    @Size(max = 20)
+    @Column(nullable = false, length = 20)
+    private String ni_number;
+
     @Size(max = 20)
     @Column(length = 20)
     private String phone;
@@ -48,6 +53,19 @@ public class Client {
     @Size(max = 100)
     @Column(length = 100)
     private String company;
+
+    @Size(max = 100)
+    @Column(length = 100)
+    private String occupation;
+
+    @Column(name = "additional_note", columnDefinition = "TEXT")
+    private String additionalNote;
+
+    @Column(name = "has_conflict_of_interest")
+    private Boolean hasConflictOfInterest = false;
+
+    @Column(name = "conflict_of_interest_comment", columnDefinition = "TEXT")
+    private String conflictOfInterestComment;
 
     // One-to-Many: Client → Case
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, orphanRemoval = false)

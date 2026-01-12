@@ -31,6 +31,7 @@ public class DocumentService {
 
     private final DocumentRepository documentRepository;
     private final CaseRepository caseRepository;
+    private final ActivityService activityService;
 
     @Value("${file.upload-dir:uploads}")
     private String uploadDir;
@@ -69,6 +70,16 @@ public class DocumentService {
             document.setCaseEntity(caseEntity);
 
             Document savedDocument = documentRepository.save(document);
+            
+            // Log activity
+            activityService.logActivity(
+                "document_uploaded",
+                "DOCUMENT",
+                savedDocument.getId(),
+                caseId,
+                String.format("Uploaded document: %s (%.2f KB)", originalFileName, file.getSize() / 1024.0)
+            );
+            
             return mapToResponse(savedDocument);
 
         } catch (IOException e) {
@@ -116,6 +127,9 @@ public class DocumentService {
         Document document = documentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Document not found with id: " + id));
 
+        String fileName = document.getFileName();
+        Long caseId = document.getCaseEntity() != null ? document.getCaseEntity().getId() : null;
+
         try {
             // Delete file from filesystem
             Path filePath = Paths.get(document.getFilePath());
@@ -123,6 +137,16 @@ public class DocumentService {
 
             // Delete document record
             documentRepository.deleteById(id);
+            
+            // Log activity
+            activityService.logActivity(
+                "document_deleted",
+                "DOCUMENT",
+                id,
+                caseId,
+                String.format("Deleted document: %s", fileName)
+            );
+            
         } catch (IOException e) {
             throw new RuntimeException("Failed to delete file: " + document.getFileName(), e);
         }
@@ -135,7 +159,29 @@ public class DocumentService {
         response.setFileType(document.getFileType());
         response.setFileSize(document.getFileSize());
         response.setCaseId(document.getCaseEntity().getId());
+        response.setCurrentVersion(document.getCurrentVersion());
+        response.setDescription(document.getDescription());
+        response.setOcrText(document.getOcrText());
+        response.setIsTemplateBased(document.getIsTemplateBased());
+        
+        if (document.getTemplate() != null) {
+            response.setTemplateId(document.getTemplate().getId());
+            response.setTemplateName(document.getTemplate().getName());
+        }
+        
+        if (document.getUploadedBy() != null) {
+            response.setUploadedByUsername(document.getUploadedBy().getUsername());
+        }
+        
+        response.setTotalVersions(document.getVersions().size());
+        
+        long pendingSignatures = document.getSignatures().stream()
+                .filter(sig -> sig.getStatus() == com.skk.jdsbackend.entity.DocumentSignatureStatus.PENDING)
+                .count();
+        response.setPendingSignatures((int) pendingSignatures);
+        
         response.setUploadedAt(document.getUploadedAt());
+        response.setUpdatedAt(document.getUpdatedAt());
         return response;
     }
 }

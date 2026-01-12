@@ -25,7 +25,6 @@ import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
 public class SecurityConfig {
 
     @Autowired
