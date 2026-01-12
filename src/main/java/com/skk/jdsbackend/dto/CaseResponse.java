@@ -25,6 +25,9 @@ public class CaseResponse {
     private ClientSummaryDto client;
     private Integer notesCount;
     private Integer documentsCount;
+    private String referenceNumber;
+    private UserSummaryDto createdByUser;
+    private UserSummaryDto lastModifiedByUser;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

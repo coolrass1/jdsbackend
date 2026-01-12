@@ -39,4 +39,6 @@ public class ClientUpdateRequest {
     private Boolean hasConflictOfInterest;
 
     private String conflictOfInterestComment;
+
+    private String referenceNumber;
 }

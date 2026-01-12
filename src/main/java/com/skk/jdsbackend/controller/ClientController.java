@@ -1,18 +1,22 @@
 package com.skk.jdsbackend.controller;
 
+import com.skk.jdsbackend.dto.AssignUsersRequest;
 import com.skk.jdsbackend.dto.CaseResponse;
 import com.skk.jdsbackend.dto.ClientCreateRequest;
 import com.skk.jdsbackend.dto.ClientResponse;
 import com.skk.jdsbackend.dto.ClientUpdateRequest;
 import com.skk.jdsbackend.dto.MessageResponse;
+import com.skk.jdsbackend.dto.UserSummaryDto;
 import com.skk.jdsbackend.repository.CaseRepository;
 import com.skk.jdsbackend.service.CaseService;
 import com.skk.jdsbackend.service.ClientService;
+import com.skk.jdsbackend.security.UserDetailsImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,10 +32,22 @@ public class ClientController {
     private final CaseRepository caseRepository;
     private final CaseService caseService;
 
+    // ... existing endpoints ...
+
+    @GetMapping("/assigned")
+    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
+    public ResponseEntity<List<ClientResponse>> getAssignedClients(
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        List<ClientResponse> clients = clientService.getClientsForUser(userDetails.getId());
+        return ResponseEntity.ok(clients);
+    }
+
     @PostMapping
     @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
-    public ResponseEntity<ClientResponse> createClient(@Valid @RequestBody ClientCreateRequest request) {
-        ClientResponse response = clientService.createClient(request);
+    public ResponseEntity<ClientResponse> createClient(
+            @Valid @RequestBody ClientCreateRequest request,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        ClientResponse response = clientService.createClient(request, userDetails.getId());
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
@@ -74,8 +90,9 @@ public class ClientController {
     @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
     public ResponseEntity<ClientResponse> updateClient(
             @PathVariable Long id,
-            @Valid @RequestBody ClientUpdateRequest request) {
-        ClientResponse response = clientService.updateClient(id, request);
+            @Valid @RequestBody ClientUpdateRequest request,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        ClientResponse response = clientService.updateClient(id, request, userDetails.getId());
         return ResponseEntity.ok(response);
     }
 
@@ -84,5 +101,30 @@ public class ClientController {
     public ResponseEntity<MessageResponse> deleteClient(@PathVariable Long id) {
         clientService.deleteClient(id);
         return ResponseEntity.ok(new MessageResponse("Client deleted successfully"));
+    }
+
+    @PostMapping("/{id}/users")
+    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
+    public ResponseEntity<ClientResponse> assignUsersToClient(
+            @PathVariable Long id,
+            @Valid @RequestBody AssignUsersRequest request) {
+        ClientResponse response = clientService.assignUsers(id, request.getUserIds());
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{id}/users/{userId}")
+    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
+    public ResponseEntity<ClientResponse> removeUserFromClient(
+            @PathVariable Long id,
+            @PathVariable Long userId) {
+        ClientResponse response = clientService.removeUser(id, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/users")
+    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
+    public ResponseEntity<List<UserSummaryDto>> getAssignedUsers(@PathVariable Long id) {
+        List<UserSummaryDto> users = clientService.getAssignedUsers(id);
+        return ResponseEntity.ok(users);
     }
 }

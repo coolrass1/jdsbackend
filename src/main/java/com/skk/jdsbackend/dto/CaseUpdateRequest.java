@@ -32,4 +32,6 @@ public class CaseUpdateRequest {
     private Long assignedUserId;
 
     private Long clientId;
+
+    private String referenceNumber;
 }

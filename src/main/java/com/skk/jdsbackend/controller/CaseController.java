@@ -5,9 +5,11 @@ import com.skk.jdsbackend.entity.CaseStatus;
 import com.skk.jdsbackend.service.CaseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import com.skk.jdsbackend.security.UserDetailsImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,8 +24,9 @@ public class CaseController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('CASE_WRITE')")
-    public ResponseEntity<CaseResponse> createCase(@Valid @RequestBody CaseCreateRequest request) {
-        CaseResponse response = caseService.createCase(request);
+    public ResponseEntity<CaseResponse> createCase(@Valid @RequestBody CaseCreateRequest request,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        CaseResponse response = caseService.createCase(request, userDetails.getId());
         System.out.println("Case created successfully: " + response);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
@@ -67,8 +70,9 @@ public class CaseController {
     @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
     public ResponseEntity<CaseResponse> updateCase(
             @PathVariable Long id,
-            @Valid @RequestBody CaseUpdateRequest request) {
-        CaseResponse response = caseService.updateCase(id, request);
+            @Valid @RequestBody CaseUpdateRequest request,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        CaseResponse response = caseService.updateCase(id, request, userDetails.getId());
         return ResponseEntity.ok(response);
     }
 

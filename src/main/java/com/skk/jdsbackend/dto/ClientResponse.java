@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -25,6 +26,10 @@ public class ClientResponse {
     private Boolean hasConflictOfInterest;
     private String conflictOfInterestComment;
     private Integer casesCount;
+    private List<UserSummaryDto> assignedUsers;
+    private String referenceNumber;
+    private UserSummaryDto createdByUser;
+    private UserSummaryDto lastModifiedByUser;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

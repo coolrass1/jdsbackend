@@ -16,5 +16,6 @@ public class UserResponse {
     private String username;
     private String email;
     private List<String> roles;
+    private List<ClientSummaryDto> assignedClients;
     private LocalDateTime createdAt;
 }

@@ -11,6 +11,7 @@ import com.skk.jdsbackend.repository.ClientRepository;
 import com.skk.jdsbackend.repository.DocumentRepository;
 import com.skk.jdsbackend.repository.NoteRepository;
 import com.skk.jdsbackend.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,9 +30,10 @@ public class CaseService {
     private final NoteRepository noteRepository;
     private final DocumentRepository documentRepository;
     private final ActivityService activityService;
+    private final SequenceGeneratorService sequenceGeneratorService;
 
     @Transactional
-    public CaseResponse createCase(CaseCreateRequest request) {
+    public CaseResponse createCase(CaseCreateRequest request, Long creatorId) {
         Case caseEntity = new Case();
         caseEntity.setTitle(request.getTitle());
         caseEntity.setDescription(request.getDescription());
@@ -52,17 +54,28 @@ public class CaseService {
             caseEntity.setClient(client);
         }
 
+        // Audit fields
+        if (request.getReferenceNumber() != null && !request.getReferenceNumber().isBlank()) {
+            caseEntity.setReferenceNumber(request.getReferenceNumber());
+        } else {
+            caseEntity.setReferenceNumber(sequenceGeneratorService.generateNextCaseReference());
+        }
+
+        User creator = userRepository.findById(creatorId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + creatorId));
+        caseEntity.setCreatedByUser(creator);
+        caseEntity.setLastModifiedByUser(creator);
+
         Case savedCase = caseRepository.save(caseEntity);
-        
+
         // Log activity
         activityService.logActivity(
-            "case_created",
-            "CASE",
-            savedCase.getId(),
-            savedCase.getId(),
-            String.format("Created case: %s (Priority: %s)", request.getTitle(), request.getPriority())
-        );
-        
+                "case_created",
+                "CASE",
+                savedCase.getId(),
+                savedCase.getId(),
+                String.format("Created case: %s (Priority: %s)", request.getTitle(), request.getPriority()));
+
         return mapToResponse(savedCase);
     }
 
@@ -131,7 +144,7 @@ public class CaseService {
     }
 
     @Transactional
-    public CaseResponse updateCase(Long id, CaseUpdateRequest request) {
+    public CaseResponse updateCase(Long id, CaseUpdateRequest request, Long modifierId) {
         Case caseEntity = caseRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Case not found with id: " + id));
 
@@ -169,6 +182,14 @@ public class CaseService {
             caseEntity.setClient(client);
         }
 
+        if (request.getReferenceNumber() != null) {
+            caseEntity.setReferenceNumber(request.getReferenceNumber());
+        }
+
+        User modifier = userRepository.findById(modifierId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + modifierId));
+        caseEntity.setLastModifiedByUser(modifier);
+
         Case updatedCase = caseRepository.save(caseEntity);
         return mapToResponse(updatedCase);
     }
@@ -190,6 +211,13 @@ public class CaseService {
         response.setPriority(caseEntity.getPriority());
         response.setCreatedAt(caseEntity.getCreatedAt());
         response.setUpdatedAt(caseEntity.getUpdatedAt());
+        response.setReferenceNumber(caseEntity.getReferenceNumber());
+        if (caseEntity.getCreatedByUser() != null) {
+            response.setCreatedByUser(mapToUserSummary(caseEntity.getCreatedByUser()));
+        }
+        if (caseEntity.getLastModifiedByUser() != null) {
+            response.setLastModifiedByUser(mapToUserSummary(caseEntity.getLastModifiedByUser()));
+        }
 
         if (caseEntity.getAssignedUser() != null) {
             UserSummaryDto userSummary = new UserSummaryDto();
@@ -229,6 +257,13 @@ public class CaseService {
         response.setDueDate(caseEntity.getDueDate());
         response.setCreatedAt(caseEntity.getCreatedAt());
         response.setUpdatedAt(caseEntity.getUpdatedAt());
+        response.setReferenceNumber(caseEntity.getReferenceNumber());
+        if (caseEntity.getCreatedByUser() != null) {
+            response.setCreatedByUser(mapToUserSummary(caseEntity.getCreatedByUser()));
+        }
+        if (caseEntity.getLastModifiedByUser() != null) {
+            response.setLastModifiedByUser(mapToUserSummary(caseEntity.getLastModifiedByUser()));
+        }
 
         if (caseEntity.getAssignedUser() != null) {
             UserSummaryDto userSummary = new UserSummaryDto();
@@ -253,5 +288,12 @@ public class CaseService {
         response.setDocumentsCount(docCounts.getOrDefault(caseEntity.getId(), 0L).intValue());
 
         return response;
+    }
+
+    private UserSummaryDto mapToUserSummary(User user) {
+        return new UserSummaryDto(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail());
     }
 }

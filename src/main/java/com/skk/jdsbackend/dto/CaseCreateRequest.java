@@ -36,4 +36,6 @@ public class CaseCreateRequest {
     private Long assignedUserId;
 
     private Long clientId;
+
+    private String referenceNumber;
 }

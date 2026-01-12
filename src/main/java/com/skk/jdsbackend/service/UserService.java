@@ -39,6 +39,18 @@ public class UserService {
                 user.getRoles().stream()
                         .map(Enum::name)
                         .collect(Collectors.toList()),
+                user.getClients().stream()
+                        .map(this::mapToClientSummary)
+                        .collect(Collectors.toList()),
                 user.getCreatedAt());
+    }
+
+    private com.skk.jdsbackend.dto.ClientSummaryDto mapToClientSummary(com.skk.jdsbackend.entity.Client client) {
+        return new com.skk.jdsbackend.dto.ClientSummaryDto(
+                client.getId(),
+                client.getFirstname(),
+                client.getLastname(),
+                client.getEmail(),
+                client.getCompany());
     }
 }
