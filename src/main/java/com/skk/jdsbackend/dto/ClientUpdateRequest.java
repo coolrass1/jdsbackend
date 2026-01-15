@@ -41,4 +41,6 @@ public class ClientUpdateRequest {
     private String conflictOfInterestComment;
 
     private String referenceNumber;
+
+    private Long assignedUserId;
 }

@@ -1,0 +1,256 @@
+{
+    "info": {
+        "name": "Add Participant Tests",
+        "description": "Tests for adding participants with specific roles (EDITOR or READ_ONLY)",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:5000/api",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "Add Participant as EDITOR",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Participant added successfully\", function () {",
+                            "    pm.response.to.have.status(200);",
+                            "    var jsonData = pm.response.json();",
+                            "    pm.expect(jsonData.participants).to.be.an('array');",
+                            "    pm.expect(jsonData.participants.length).to.be.greaterThan(0);",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{caseworkerToken}}",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"userId\": 4,\n    \"role\": \"EDITOR\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/cases/3/participants",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "cases",
+                        "3",
+                        "participants"
+                    ]
+                },
+                "description": "Case owner adds a participant with EDITOR role to their case"
+            }
+        },
+        {
+            "name": "Add Participant as READ_ONLY",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Read-only participant added successfully\", function () {",
+                            "    pm.response.to.have.status(200);",
+                            "    var jsonData = pm.response.json();",
+                            "    pm.expect(jsonData.participants).to.be.an('array');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{caseworkerToken}}",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"userId\": 5,\n    \"role\": \"READ_ONLY\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/cases/3/participants",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "cases",
+                        "3",
+                        "participants"
+                    ]
+                },
+                "description": "Case owner adds a participant with READ_ONLY role to their case"
+            }
+        },
+        {
+            "name": "Unrelated User Cannot Add Participant",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Unrelated user cannot add participant\", function () {",
+                            "    pm.response.to.have.status(403);",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{caseworker2Token}}",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"userId\": 4,\n    \"role\": \"EDITOR\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/cases/1/participants",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "cases",
+                        "1",
+                        "participants"
+                    ]
+                },
+                "description": "Caseworker2 tries to add participant to a case they don't own (should fail)"
+            }
+        },
+        {
+            "name": "Supervisor Can Add Participant",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Supervisor can add participant to any case\", function () {",
+                            "    pm.response.to.have.status(200);",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{supervisorToken}}",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"userId\": 2,\n    \"role\": \"EDITOR\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/cases/1/participants",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "cases",
+                        "1",
+                        "participants"
+                    ]
+                },
+                "description": "Supervisor adds participant to any case (full access)"
+            }
+        },
+        {
+            "name": "Viewer Cannot Add Participant",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Viewer cannot add participant\", function () {",
+                            "    pm.response.to.have.status(403);",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{viewerToken}}",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"userId\": 2,\n    \"role\": \"EDITOR\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/cases/1/participants",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "cases",
+                        "1",
+                        "participants"
+                    ]
+                },
+                "description": "Viewer tries to add participant (should fail - read-only access)"
+            }
+        }
+    ]
+}

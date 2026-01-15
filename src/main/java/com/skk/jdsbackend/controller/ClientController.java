@@ -1,6 +1,5 @@
 package com.skk.jdsbackend.controller;
 
-import com.skk.jdsbackend.dto.AssignUsersRequest;
 import com.skk.jdsbackend.dto.CaseResponse;
 import com.skk.jdsbackend.dto.ClientCreateRequest;
 import com.skk.jdsbackend.dto.ClientResponse;
@@ -103,28 +102,26 @@ public class ClientController {
         return ResponseEntity.ok(new MessageResponse("Client deleted successfully"));
     }
 
-    @PostMapping("/{id}/users")
+    @PostMapping("/{id}/user")
     @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
-    public ResponseEntity<ClientResponse> assignUsersToClient(
+    public ResponseEntity<ClientResponse> assignUserToClient(
             @PathVariable Long id,
-            @Valid @RequestBody AssignUsersRequest request) {
-        ClientResponse response = clientService.assignUsers(id, request.getUserIds());
+            @RequestParam Long userId) {
+        ClientResponse response = clientService.assignUser(id, userId);
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/{id}/users/{userId}")
+    @DeleteMapping("/{id}/user")
     @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
-    public ResponseEntity<ClientResponse> removeUserFromClient(
-            @PathVariable Long id,
-            @PathVariable Long userId) {
-        ClientResponse response = clientService.removeUser(id, userId);
+    public ResponseEntity<ClientResponse> removeUserFromClient(@PathVariable Long id) {
+        ClientResponse response = clientService.removeAssignedUser(id);
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}/users")
+    @GetMapping("/{id}/user")
     @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
-    public ResponseEntity<List<UserSummaryDto>> getAssignedUsers(@PathVariable Long id) {
-        List<UserSummaryDto> users = clientService.getAssignedUsers(id);
-        return ResponseEntity.ok(users);
+    public ResponseEntity<UserSummaryDto> getAssignedUser(@PathVariable Long id) {
+        UserSummaryDto user = clientService.getAssignedUser(id);
+        return ResponseEntity.ok(user);
     }
 }

@@ -1,0 +1,530 @@
+{
+    "info": {
+        "name": "Client CRUD Tests",
+        "description": "Tests for client management including create, read, update, delete, and user assignment",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:5000/api",
+            "type": "string"
+        },
+        {
+            "key": "createdClientId",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "Create Client",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Client created successfully\", function () {",
+                            "    pm.response.to.have.status(201);",
+                            "    var jsonData = pm.response.json();",
+                            "    pm.expect(jsonData.id).to.exist;",
+                            "    pm.expect(jsonData.firstname).to.equal(\"Jane\");",
+                            "    pm.expect(jsonData.lastname).to.equal(\"Doe\");",
+                            "    pm.expect(jsonData.email).to.equal(\"jane.doe@example.com\");",
+                            "    pm.expect(jsonData.referenceNumber).to.exist;",
+                            "    pm.collectionVariables.set(\"createdClientId\", jsonData.id);",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{caseworkerToken}}",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"firstname\": \"Jane\",\n    \"lastname\": \"Doe\",\n    \"email\": \"jane.doe@example.com\",\n    \"ni_number\": \"GH567890D\",\n    \"phone\": \"+44-20-7456-7890\",\n    \"address\": \"321 Oak Avenue, Leeds, UK\",\n    \"company\": \"Digital Agency\",\n    \"occupation\": \"Marketing Manager\",\n    \"hasConflictOfInterest\": false,\n    \"assignedUserId\": 2\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/clients",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "clients"
+                    ]
+                },
+                "description": "Create a new client with assigned user"
+            }
+        },
+        {
+            "name": "Get Client by ID",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Client retrieved successfully\", function () {",
+                            "    pm.response.to.have.status(200);",
+                            "    var jsonData = pm.response.json();",
+                            "    pm.expect(jsonData.id).to.exist;",
+                            "    pm.expect(jsonData.firstname).to.exist;",
+                            "    pm.expect(jsonData.assignedUser).to.exist;",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{caseworkerToken}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/clients/{{createdClientId}}",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "clients",
+                        "{{createdClientId}}"
+                    ]
+                },
+                "description": "Retrieve a client by ID"
+            }
+        },
+        {
+            "name": "Get All Clients",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Clients retrieved successfully\", function () {",
+                            "    pm.response.to.have.status(200);",
+                            "    var jsonData = pm.response.json();",
+                            "    pm.expect(jsonData).to.be.an('array');",
+                            "    pm.expect(jsonData.length).to.be.greaterThan(0);",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{caseworkerToken}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/clients",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "clients"
+                    ]
+                },
+                "description": "Get all clients"
+            }
+        },
+        {
+            "name": "Search Clients by Name",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Search results returned\", function () {",
+                            "    pm.response.to.have.status(200);",
+                            "    var jsonData = pm.response.json();",
+                            "    pm.expect(jsonData).to.be.an('array');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{caseworkerToken}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/clients/search?name=Jane",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "clients",
+                        "search"
+                    ],
+                    "query": [
+                        {
+                            "key": "name",
+                            "value": "Jane"
+                        }
+                    ]
+                },
+                "description": "Search clients by name"
+            }
+        },
+        {
+            "name": "Update Client",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Client updated successfully\", function () {",
+                            "    pm.response.to.have.status(200);",
+                            "    var jsonData = pm.response.json();",
+                            "    pm.expect(jsonData.phone).to.equal(\"+44-20-7999-8888\");",
+                            "    pm.expect(jsonData.occupation).to.equal(\"Senior Marketing Manager\");",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "PUT",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{caseworkerToken}}",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"phone\": \"+44-20-7999-8888\",\n    \"occupation\": \"Senior Marketing Manager\",\n    \"assignedUserId\": 3\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/clients/{{createdClientId}}",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "clients",
+                        "{{createdClientId}}"
+                    ]
+                },
+                "description": "Update client details and change assigned user"
+            }
+        },
+        {
+            "name": "Assign User to Client",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"User assigned successfully\", function () {",
+                            "    pm.response.to.have.status(200);",
+                            "    var jsonData = pm.response.json();",
+                            "    pm.expect(jsonData.assignedUser).to.exist;",
+                            "    pm.expect(jsonData.assignedUser.id).to.equal(2);",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{caseworkerToken}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/clients/{{createdClientId}}/user?userId=2",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "clients",
+                        "{{createdClientId}}",
+                        "user"
+                    ],
+                    "query": [
+                        {
+                            "key": "userId",
+                            "value": "2"
+                        }
+                    ]
+                },
+                "description": "Assign a user to a client"
+            }
+        },
+        {
+            "name": "Get Assigned User",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Assigned user retrieved\", function () {",
+                            "    pm.response.to.have.status(200);",
+                            "    var jsonData = pm.response.json();",
+                            "    pm.expect(jsonData.id).to.exist;",
+                            "    pm.expect(jsonData.username).to.exist;",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{caseworkerToken}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/clients/{{createdClientId}}/user",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "clients",
+                        "{{createdClientId}}",
+                        "user"
+                    ]
+                },
+                "description": "Get the assigned user for a client"
+            }
+        },
+        {
+            "name": "Get Clients for User",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"User's clients retrieved\", function () {",
+                            "    pm.response.to.have.status(200);",
+                            "    var jsonData = pm.response.json();",
+                            "    pm.expect(jsonData).to.be.an('array');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{caseworkerToken}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/clients/assigned",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "clients",
+                        "assigned"
+                    ]
+                },
+                "description": "Get all clients assigned to the current user"
+            }
+        },
+        {
+            "name": "Get Cases for Client",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Client cases retrieved\", function () {",
+                            "    pm.response.to.have.status(200);",
+                            "    var jsonData = pm.response.json();",
+                            "    pm.expect(jsonData).to.be.an('array');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{caseworkerToken}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/clients/1/cases",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "clients",
+                        "1",
+                        "cases"
+                    ]
+                },
+                "description": "Get all cases for a specific client"
+            }
+        },
+        {
+            "name": "Remove Assigned User",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Assigned user removed\", function () {",
+                            "    pm.response.to.have.status(200);",
+                            "    var jsonData = pm.response.json();",
+                            "    pm.expect(jsonData.assignedUser).to.be.null;",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "DELETE",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{caseworkerToken}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/clients/{{createdClientId}}/user",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "clients",
+                        "{{createdClientId}}",
+                        "user"
+                    ]
+                },
+                "description": "Remove the assigned user from a client"
+            }
+        },
+        {
+            "name": "Delete Client (Admin Only)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Client deleted successfully\", function () {",
+                            "    pm.response.to.have.status(200);",
+                            "    var jsonData = pm.response.json();",
+                            "    pm.expect(jsonData.message).to.equal(\"Client deleted successfully\");",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "DELETE",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminToken}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/clients/{{createdClientId}}",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "clients",
+                        "{{createdClientId}}"
+                    ]
+                },
+                "description": "Delete a client (Admin only)"
+            }
+        },
+        {
+            "name": "Delete Client (Non-Admin - Should Fail)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Non-admin cannot delete client\", function () {",
+                            "    pm.response.to.have.status(403);",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "DELETE",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{caseworkerToken}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/clients/1",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "clients",
+                        "1"
+                    ]
+                },
+                "description": "Caseworker tries to delete client (should fail)"
+            }
+        }
+    ]
+}

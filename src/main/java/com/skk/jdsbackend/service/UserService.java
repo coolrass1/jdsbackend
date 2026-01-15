@@ -15,42 +15,38 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserService {
 
-    private final UserRepository userRepository;
+        private final UserRepository userRepository;
 
-    @Transactional(readOnly = true)
-    public List<UserResponse> getAllUsers() {
-        return userRepository.findAll().stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
+        @Transactional(readOnly = true)
+        public List<UserResponse> getAllUsers() {
+                return userRepository.findAll().stream()
+                                .map(this::mapToResponse)
+                                .collect(Collectors.toList());
+        }
 
-    @Transactional(readOnly = true)
-    public UserResponse getUserById(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
-        return mapToResponse(user);
-    }
+        @Transactional(readOnly = true)
+        public UserResponse getUserById(Long id) {
+                User user = userRepository.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+                return mapToResponse(user);
+        }
 
-    private UserResponse mapToResponse(User user) {
-        return new UserResponse(
-                user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                user.getRoles().stream()
-                        .map(Enum::name)
-                        .collect(Collectors.toList()),
-                user.getClients().stream()
-                        .map(this::mapToClientSummary)
-                        .collect(Collectors.toList()),
-                user.getCreatedAt());
-    }
+        @Transactional
+        public void deleteUser(Long id) {
+                User user = userRepository.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+                userRepository.delete(user);
+        }
 
-    private com.skk.jdsbackend.dto.ClientSummaryDto mapToClientSummary(com.skk.jdsbackend.entity.Client client) {
-        return new com.skk.jdsbackend.dto.ClientSummaryDto(
-                client.getId(),
-                client.getFirstname(),
-                client.getLastname(),
-                client.getEmail(),
-                client.getCompany());
-    }
+        private UserResponse mapToResponse(User user) {
+                return new UserResponse(
+                                user.getId(),
+                                user.getUsername(),
+                                user.getEmail(),
+                                user.getRoles().stream()
+                                                .map(Enum::name)
+                                                .collect(Collectors.toList()),
+                                null, // No longer tracking assigned clients on User
+                                user.getCreatedAt());
+        }
 }

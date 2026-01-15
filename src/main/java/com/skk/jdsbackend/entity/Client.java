@@ -12,9 +12,7 @@ import lombok.ToString;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Entity
 @Table(name = "clients")
@@ -77,11 +75,12 @@ public class Client {
     @EqualsAndHashCode.Exclude
     private List<Case> cases = new ArrayList<>();
 
-    // Many-to-Many: Client ↔ User (assigned users)
-    @ManyToMany(mappedBy = "clients", fetch = FetchType.LAZY)
+    // Many-to-One: Client → User (assigned user)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_user_id")
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private Set<User> assignedUsers = new HashSet<>();
+    private User assignedUser;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -124,15 +123,5 @@ public class Client {
     public void removeCase(Case caseEntity) {
         cases.remove(caseEntity);
         caseEntity.setClient(null);
-    }
-
-    public void addUser(User user) {
-        this.assignedUsers.add(user);
-        user.getClients().add(this);
-    }
-
-    public void removeUser(User user) {
-        this.assignedUsers.remove(user);
-        user.getClients().remove(this);
     }
 }

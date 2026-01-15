@@ -32,7 +32,7 @@ public class CaseController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('CASE_READ')")
+    @PreAuthorize("@caseSecurity.canAccess(authentication, #id, 'READ')")
     public ResponseEntity<CaseResponse> getCaseById(@PathVariable Long id) {
         CaseResponse response = caseService.getCaseById(id);
         return ResponseEntity.ok(response);
@@ -67,7 +67,7 @@ public class CaseController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
+    @PreAuthorize("@caseSecurity.canAccess(authentication, #id, 'WRITE')")
     public ResponseEntity<CaseResponse> updateCase(
             @PathVariable Long id,
             @Valid @RequestBody CaseUpdateRequest request,
@@ -81,5 +81,34 @@ public class CaseController {
     public ResponseEntity<MessageResponse> deleteCase(@PathVariable Long id) {
         caseService.deleteCase(id);
         return ResponseEntity.ok(new MessageResponse("Case deleted successfully"));
+    }
+
+    @GetMapping("/participant/{userId}")
+    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
+    public ResponseEntity<List<CaseResponse>> getCasesByParticipant(@PathVariable Long userId) {
+        List<CaseResponse> cases = caseService.getCasesByParticipant(userId);
+        return ResponseEntity.ok(cases);
+    }
+
+    @PostMapping("/{caseId}/participants")
+    @PreAuthorize("@caseSecurity.canAccess(authentication, #caseId, 'WRITE')")
+    public ResponseEntity<CaseResponse> addParticipant(
+            @PathVariable Long caseId,
+            @Valid @RequestBody AddParticipantRequest request) {
+        CaseResponse response = caseService.addParticipant(caseId, request.getUserId(), request.getRole());
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{caseId}/participants/{userId}")
+    @PreAuthorize("@caseSecurity.canAccess(authentication, #caseId, 'WRITE')")
+    public ResponseEntity<CaseResponse> removeParticipant(@PathVariable Long caseId, @PathVariable Long userId) {
+        return ResponseEntity.ok(caseService.removeParticipant(caseId, userId));
+    }
+
+    @GetMapping("/my-cases")
+    @PreAuthorize("hasRole('CASE_WORKER') or hasRole('ADMIN')")
+    public ResponseEntity<List<CaseResponse>> getMyCases(
+            @AuthenticationPrincipal com.skk.jdsbackend.security.UserDetailsImpl userDetails) {
+        return ResponseEntity.ok(caseService.getMyCases(userDetails.getId()));
     }
 }

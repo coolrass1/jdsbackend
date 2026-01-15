@@ -7,8 +7,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -46,7 +44,7 @@ public class ClientCreateRequest {
 
     private String conflictOfInterestComment;
 
-    private List<Long> assignedUserIds;
+    private Long assignedUserId;
 
     private String referenceNumber;
 }

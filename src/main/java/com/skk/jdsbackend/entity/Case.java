@@ -11,10 +11,22 @@ import lombok.ToString;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "cases")
+@SQLDelete(sql = "UPDATE cases SET deleted = true WHERE id = ?")
+@SQLRestriction("deleted = false")
+@EntityListeners(AuditingEntityListener.class)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -64,10 +76,19 @@ public class Case {
     @Column(name = "due_date", nullable = true)
     private LocalDateTime dueDate;
 
+    @Column(nullable = false)
+    private boolean deleted = false;
+
     // Many-to-One: Case → User (assigned user)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_user_id")
     private User assignedUser;
+
+    // One-to-Many: Case → CaseParticipant
+    @OneToMany(mappedBy = "caseEntity", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Set<CaseParticipant> participants = new HashSet<>();
 
     // Many-to-One: Case → Client
     @ManyToOne(fetch = FetchType.LAZY)
@@ -84,6 +105,14 @@ public class Case {
     // One-to-Many: Case → Document
     @OneToMany(mappedBy = "caseEntity", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Document> documents = new ArrayList<>();
+
+    @CreatedBy
+    @Column(name = "created_by", nullable = true, updatable = false)
+    private String createdBy;
+
+    @LastModifiedBy
+    @Column(name = "last_modified_by")
+    private String lastModifiedBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -121,5 +150,14 @@ public class Case {
     public void removeDocument(Document document) {
         documents.remove(document);
         document.setCaseEntity(null);
+    }
+
+    public void addParticipant(User user, CaseParticipantRole role) {
+        CaseParticipant participant = new CaseParticipant(this, user, role);
+        participants.add(participant);
+    }
+
+    public void removeParticipant(User user) {
+        participants.removeIf(p -> p.getUser().equals(user));
     }
 }

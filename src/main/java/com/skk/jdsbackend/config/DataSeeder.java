@@ -120,6 +120,28 @@ public class DataSeeder implements CommandLineRunner {
         users.add(userRepository.save(caseWorker2));
         log.info("Created case worker 2 user - username: caseworker2, password: password123");
 
+        // Create supervisor user
+        User supervisor = new User();
+        supervisor.setUsername("supervisor");
+        supervisor.setEmail("supervisor@jds.com");
+        supervisor.setPassword(passwordEncoder.encode("password123"));
+        Set<Role> supervisorRoles = new HashSet<>();
+        supervisorRoles.add(Role.SUPERVISOR);
+        supervisor.setRoles(supervisorRoles);
+        users.add(userRepository.save(supervisor));
+        log.info("Created supervisor user - username: supervisor, password: password123");
+
+        // Create viewer user
+        User viewer = new User();
+        viewer.setUsername("viewer");
+        viewer.setEmail("viewer@jds.com");
+        viewer.setPassword(passwordEncoder.encode("password123"));
+        Set<Role> viewerRoles = new HashSet<>();
+        viewerRoles.add(Role.VIEWER);
+        viewer.setRoles(viewerRoles);
+        users.add(userRepository.save(viewer));
+        log.info("Created viewer user - username: viewer, password: password123");
+
         log.info("Users seeded successfully!");
         return users;
     }
@@ -138,9 +160,8 @@ public class DataSeeder implements CommandLineRunner {
         client1.setAddress("123 High Street, London, UK");
         client1.setCompany("Tech Solutions Ltd");
         client1.setHasConflictOfInterest(false);
-        // Assign users
-        client1.addUser(users.get(0)); // Admin
-        client1.addUser(users.get(1)); // Caseworker
+        // Assign user (changed to single user)
+        client1.setAssignedUser(users.get(0)); // Admin
         // Audit fields
         client1.setReferenceNumber(sequenceGeneratorService.generateNextClientReference());
         client1.setCreatedByUser(users.get(0)); // Admin
@@ -156,8 +177,8 @@ public class DataSeeder implements CommandLineRunner {
         client2.setAddress("456 Park Lane, Manchester, UK");
         client2.setCompany("Marketing Pro");
         client2.setHasConflictOfInterest(false);
-        // Assign users
-        client2.addUser(users.get(1)); // Caseworker
+        // Assign user (changed to single user)
+        client2.setAssignedUser(users.get(1)); // Caseworker
         // Audit fields
         client2.setReferenceNumber(sequenceGeneratorService.generateNextClientReference());
         client2.setCreatedByUser(users.get(1)); // Caseworker
@@ -174,8 +195,8 @@ public class DataSeeder implements CommandLineRunner {
         client3.setCompany("Consulting Group");
         client3.setHasConflictOfInterest(true);
         client3.setConflictOfInterestComment("Previously worked with competing firm");
-        // Assign users
-        client3.addUser(users.get(2)); // Caseworker 2
+        // Assign user (changed to single user)
+        client3.setAssignedUser(users.get(2)); // Caseworker 2
         // Audit fields
         client3.setReferenceNumber(sequenceGeneratorService.generateNextClientReference());
         client3.setCreatedByUser(users.get(2)); // Caseworker
@@ -208,6 +229,7 @@ public class DataSeeder implements CommandLineRunner {
         case1.setPriority(CasePriority.HIGH);
         case1.setClient(clients.get(0));
         case1.setAssignedUser(caseWorkers.get(0));
+        case1.addParticipant(users.get(0), CaseParticipantRole.EDITOR); // Admin as participant
         case1.setReferenceNumber(sequenceGeneratorService.generateNextCaseReference());
         case1.setCreatedByUser(caseWorkers.get(0));
         case1.setLastModifiedByUser(caseWorkers.get(0));
@@ -218,7 +240,6 @@ public class DataSeeder implements CommandLineRunner {
         case2.setTitle("Employment Termination Review");
         case2.setDescription("Review of employment termination circumstances and potential wrongful dismissal claim.");
         case2.setStatus(CaseStatus.IN_PROGRESS);
-        case2.setPriority(CasePriority.URGENT);
         case2.setClient(clients.get(1));
         case2.setAssignedUser(caseWorkers.get(0));
         case2.setReferenceNumber(sequenceGeneratorService.generateNextCaseReference());
@@ -234,6 +255,11 @@ public class DataSeeder implements CommandLineRunner {
         case3.setPriority(CasePriority.MEDIUM);
         case3.setClient(clients.get(2));
         case3.setAssignedUser(caseWorkers.size() > 1 ? caseWorkers.get(1) : caseWorkers.get(0));
+        // Add multiple participants if available
+        case3.addParticipant(users.get(0), CaseParticipantRole.EDITOR); // Admin
+        if (caseWorkers.size() > 1) {
+            case3.addParticipant(caseWorkers.get(0), CaseParticipantRole.EDITOR); // First caseworker also participant
+        }
         case3.setReferenceNumber(sequenceGeneratorService.generateNextCaseReference());
         case3.setCreatedByUser(caseWorkers.size() > 1 ? caseWorkers.get(1) : caseWorkers.get(0));
         case3.setLastModifiedByUser(caseWorkers.size() > 1 ? caseWorkers.get(1) : caseWorkers.get(0));

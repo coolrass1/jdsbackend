@@ -70,16 +70,15 @@ public class DocumentService {
             document.setCaseEntity(caseEntity);
 
             Document savedDocument = documentRepository.save(document);
-            
+
             // Log activity
             activityService.logActivity(
-                "document_uploaded",
-                "DOCUMENT",
-                savedDocument.getId(),
-                caseId,
-                String.format("Uploaded document: %s (%.2f KB)", originalFileName, file.getSize() / 1024.0)
-            );
-            
+                    "document_uploaded",
+                    "DOCUMENT",
+                    savedDocument.getId(),
+                    caseId,
+                    String.format("Uploaded document: %s (%.2f KB)", originalFileName, file.getSize() / 1024.0));
+
             return mapToResponse(savedDocument);
 
         } catch (IOException e) {
@@ -137,16 +136,15 @@ public class DocumentService {
 
             // Delete document record
             documentRepository.deleteById(id);
-            
+
             // Log activity
             activityService.logActivity(
-                "document_deleted",
-                "DOCUMENT",
-                id,
-                caseId,
-                String.format("Deleted document: %s", fileName)
-            );
-            
+                    "document_deleted",
+                    "DOCUMENT",
+                    id,
+                    caseId,
+                    String.format("Deleted document: %s", fileName));
+
         } catch (IOException e) {
             throw new RuntimeException("Failed to delete file: " + document.getFileName(), e);
         }
@@ -163,25 +161,68 @@ public class DocumentService {
         response.setDescription(document.getDescription());
         response.setOcrText(document.getOcrText());
         response.setIsTemplateBased(document.getIsTemplateBased());
-        
+
         if (document.getTemplate() != null) {
             response.setTemplateId(document.getTemplate().getId());
             response.setTemplateName(document.getTemplate().getName());
         }
-        
+
         if (document.getUploadedBy() != null) {
             response.setUploadedByUsername(document.getUploadedBy().getUsername());
         }
-        
+
         response.setTotalVersions(document.getVersions().size());
-        
+
         long pendingSignatures = document.getSignatures().stream()
                 .filter(sig -> sig.getStatus() == com.skk.jdsbackend.entity.DocumentSignatureStatus.PENDING)
                 .count();
         response.setPendingSignatures((int) pendingSignatures);
-        
+
         response.setUploadedAt(document.getUploadedAt());
         response.setUpdatedAt(document.getUpdatedAt());
         return response;
+    }
+
+    /**
+     * Handle callback from ONLYOFFICE Document Server when document is saved
+     */
+    @Transactional
+    public void handleOnlyOfficeCallback(Long documentId, com.skk.jdsbackend.dto.OnlyOfficeCallbackRequest callback) {
+        // Status 2 means document is ready to be saved
+        // Status 3 means document saving error
+        if (callback.getStatus() != 2) {
+            // Ignore other statuses (1 = editing, 4 = closed with no changes, etc.)
+            return;
+        }
+
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found with id: " + documentId));
+
+        try {
+            // Download the saved document from ONLYOFFICE callback URL
+            java.net.URI uri = new java.net.URI(callback.getUrl());
+            java.io.InputStream inputStream = uri.toURL().openStream();
+
+            // Save the updated file
+            Path filePath = Paths.get(document.getFilePath());
+            Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
+            inputStream.close();
+
+            // Update document version
+            document.setCurrentVersion(document.getCurrentVersion() + 1);
+            documentRepository.save(document);
+
+            // Log activity
+            activityService.logActivity(
+                    "document_edited",
+                    "DOCUMENT",
+                    documentId,
+                    document.getCaseEntity().getId(),
+                    String.format("Document edited via ONLYOFFICE: %s (v%d)",
+                            document.getFileName(), document.getCurrentVersion()));
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to save document from ONLYOFFICE callback", e);
+        }
     }
 }

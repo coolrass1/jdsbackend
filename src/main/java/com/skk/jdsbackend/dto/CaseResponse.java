@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -22,6 +23,7 @@ public class CaseResponse {
     private String idCheckedComment;
     private LocalDateTime dueDate;
     private UserSummaryDto assignedUser;
+    private List<UserSummaryDto> participants;
     private ClientSummaryDto client;
     private Integer notesCount;
     private Integer documentsCount;

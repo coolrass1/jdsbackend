@@ -2,6 +2,8 @@ package com.skk.jdsbackend.controller;
 
 import com.skk.jdsbackend.dto.DocumentResponse;
 import com.skk.jdsbackend.dto.MessageResponse;
+import com.skk.jdsbackend.dto.OnlyOfficeCallbackRequest;
+import com.skk.jdsbackend.dto.OnlyOfficeCallbackResponse;
 import com.skk.jdsbackend.service.DocumentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -47,15 +49,18 @@ public class DocumentController {
     }
 
     @GetMapping("/download/{id}")
-    @PreAuthorize("hasAuthority('DOCUMENT_READ')")
+    // @PreAuthorize("hasAuthority('DOCUMENT_READ')") // Removed for ONLYOFFICE
+    // access
     public ResponseEntity<Resource> downloadDocument(@PathVariable Long id) {
         DocumentResponse documentInfo = documentService.getDocumentById(id);
         Resource resource = documentService.downloadDocument(id);
 
+        // Use inline disposition for ONLYOFFICE compatibility
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(documentInfo.getFileType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + documentInfo.getFileName() + "\"")
+                        "inline; filename=\"" + documentInfo.getFileName() + "\"")
+                // CORS handled by SecurityConfig
                 .body(resource);
     }
 
@@ -82,5 +87,24 @@ public class DocumentController {
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "inline; filename=\"" + documentInfo.getFileName() + "\"")
                 .body(resource);
+    }
+
+    /**
+     * POST /api/documents/callback/{id}
+     * Callback endpoint for ONLYOFFICE Document Server to save edited documents
+     * This endpoint is called by ONLYOFFICE when a document is saved
+     */
+    @PostMapping("/callback/{id}")
+    public ResponseEntity<OnlyOfficeCallbackResponse> handleOnlyOfficeCallback(
+            @PathVariable Long id,
+            @RequestBody OnlyOfficeCallbackRequest callback) {
+
+        try {
+            documentService.handleOnlyOfficeCallback(id, callback);
+            return ResponseEntity.ok(OnlyOfficeCallbackResponse.success());
+        } catch (Exception e) {
+            return ResponseEntity.ok(
+                    OnlyOfficeCallbackResponse.error(3, e.getMessage()));
+        }
     }
 }

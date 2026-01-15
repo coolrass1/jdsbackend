@@ -11,13 +11,17 @@ import com.skk.jdsbackend.repository.ClientRepository;
 import com.skk.jdsbackend.repository.DocumentRepository;
 import com.skk.jdsbackend.repository.NoteRepository;
 import com.skk.jdsbackend.repository.UserRepository;
+import com.skk.jdsbackend.entity.CaseParticipant;
+import com.skk.jdsbackend.entity.CaseParticipantRole;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -52,6 +56,16 @@ public class CaseService {
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Client not found with id: " + request.getClientId()));
             caseEntity.setClient(client);
+        }
+
+        // Handle participants
+        if (request.getParticipantIds() != null && !request.getParticipantIds().isEmpty()) {
+            for (Long participantId : request.getParticipantIds()) {
+                User participant = userRepository.findById(participantId)
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                "User not found with id: " + participantId));
+                caseEntity.addParticipant(participant, CaseParticipantRole.EDITOR);
+            }
         }
 
         // Audit fields
@@ -182,6 +196,17 @@ public class CaseService {
             caseEntity.setClient(client);
         }
 
+        // Handle participants update
+        if (request.getParticipantIds() != null) {
+            caseEntity.getParticipants().clear();
+            for (Long participantId : request.getParticipantIds()) {
+                User participant = userRepository.findById(participantId)
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                "User not found with id: " + participantId));
+                caseEntity.addParticipant(participant, CaseParticipantRole.EDITOR);
+            }
+        }
+
         if (request.getReferenceNumber() != null) {
             caseEntity.setReferenceNumber(request.getReferenceNumber());
         }
@@ -200,6 +225,55 @@ public class CaseService {
             throw new ResourceNotFoundException("Case not found with id: " + id);
         }
         caseRepository.deleteById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CaseResponse> getCasesByParticipant(Long userId) {
+        List<Case> cases = caseRepository.findByParticipantId(userId);
+
+        Map<Long, Long> noteCounts = noteRepository.countAllGroupedByCaseId().stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+        Map<Long, Long> docCounts = documentRepository.countAllGroupedByCaseId().stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+
+        return cases.stream()
+                .map(c -> mapToResponse(c, noteCounts, docCounts))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public CaseResponse addParticipant(Long caseId, Long userId, CaseParticipantRole role) {
+        Case caseEntity = caseRepository.findById(caseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Case not found with id: " + caseId));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        caseEntity.addParticipant(user, role);
+        Case updatedCase = caseRepository.save(caseEntity);
+
+        return mapToResponse(updatedCase);
+    }
+
+    @Transactional
+    public CaseResponse removeParticipant(Long caseId, Long userId) {
+        Case caseEntity = caseRepository.findById(caseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Case not found with id: " + caseId));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        caseEntity.removeParticipant(user);
+        Case updatedCase = caseRepository.save(caseEntity);
+
+        return mapToResponse(updatedCase);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CaseResponse> getMyCases(Long userId) {
+        List<Case> cases = caseRepository.findAllRelatedToUser(userId);
+        return cases.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
     private CaseResponse mapToResponse(Case caseEntity) {
@@ -235,6 +309,14 @@ public class CaseService {
             clientSummary.setEmail(caseEntity.getClient().getEmail());
             clientSummary.setCompany(caseEntity.getClient().getCompany());
             response.setClient(clientSummary);
+        }
+
+        // Map participants
+        if (caseEntity.getParticipants() != null && !caseEntity.getParticipants().isEmpty()) {
+            List<UserSummaryDto> participantsList = caseEntity.getParticipants().stream()
+                    .map(p -> mapToUserSummary(p.getUser()))
+                    .collect(Collectors.toList());
+            response.setParticipants(participantsList);
         }
 
         // Use efficient count queries for single entity lookups
@@ -281,6 +363,14 @@ public class CaseService {
             clientSummary.setEmail(caseEntity.getClient().getEmail());
             clientSummary.setCompany(caseEntity.getClient().getCompany());
             response.setClient(clientSummary);
+        }
+
+        // Map participants
+        if (caseEntity.getParticipants() != null && !caseEntity.getParticipants().isEmpty()) {
+            List<UserSummaryDto> participantsList = caseEntity.getParticipants().stream()
+                    .map(p -> mapToUserSummary(p.getUser()))
+                    .collect(Collectors.toList());
+            response.setParticipants(participantsList);
         }
 
         // Use pre-loaded counts from batch query

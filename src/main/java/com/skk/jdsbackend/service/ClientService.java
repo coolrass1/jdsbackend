@@ -60,20 +60,13 @@ public class ClientService {
 
         Client savedClient = clientRepository.save(client);
 
-        // Handle assigned users if provided
-        if (request.getAssignedUserIds() != null && !request.getAssignedUserIds().isEmpty()) {
-            for (Long userId : request.getAssignedUserIds()) {
-                User user = userRepository.findById(userId)
-                        .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
-
-                // Use helper method to maintain bidirectional relationship
-                // client.addUser(user) calls user.getClients().add(client)
-                savedClient.addUser(user);
-
-                // Since User is the owner of the relationship, we must save the User to persist
-                // the link
-                userRepository.save(user);
-            }
+        // Handle assigned user if provided
+        if (request.getAssignedUserId() != null) {
+            User user = userRepository.findById(request.getAssignedUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "User not found with id: " + request.getAssignedUserId()));
+            savedClient.setAssignedUser(user);
+            savedClient = clientRepository.save(savedClient);
         }
 
         return mapToResponse(savedClient);
@@ -146,6 +139,12 @@ public class ClientService {
         if (request.getReferenceNumber() != null) {
             client.setReferenceNumber(request.getReferenceNumber());
         }
+        if (request.getAssignedUserId() != null) {
+            User assignedUser = userRepository.findById(request.getAssignedUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "User not found with id: " + request.getAssignedUserId()));
+            client.setAssignedUser(assignedUser);
+        }
 
         User modifier = userRepository.findById(modifierId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + modifierId));
@@ -170,50 +169,49 @@ public class ClientService {
     }
 
     @Transactional
-    public ClientResponse assignUsers(Long clientId, List<Long> userIds) {
+    public ClientResponse assignUser(Long clientId, Long userId) {
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + clientId));
 
-        for (Long userId : userIds) {
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
-            client.addUser(user);
-        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+        client.setAssignedUser(user);
 
         Client updatedClient = clientRepository.save(client);
         return mapToResponse(updatedClient);
     }
 
     @Transactional
-    public ClientResponse removeUser(Long clientId, Long userId) {
+    public ClientResponse removeAssignedUser(Long clientId) {
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + clientId));
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
-
-        client.removeUser(user);
+        client.setAssignedUser(null);
 
         Client updatedClient = clientRepository.save(client);
         return mapToResponse(updatedClient);
     }
 
     @Transactional(readOnly = true)
-    public List<UserSummaryDto> getAssignedUsers(Long clientId) {
+    public UserSummaryDto getAssignedUser(Long clientId) {
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + clientId));
 
-        return client.getAssignedUsers().stream()
-                .map(this::mapToUserSummary)
-                .collect(Collectors.toList());
+        if (client.getAssignedUser() != null) {
+            return mapToUserSummary(client.getAssignedUser());
+        }
+        return null;
     }
 
     @Transactional(readOnly = true)
     public List<ClientResponse> getClientsForUser(Long userId) {
-        User user = userRepository.findById(userId)
+        // Verify user exists
+        userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
-        return user.getClients().stream()
+        // Query clients where this user is the assigned user
+        return clientRepository.findAll().stream()
+                .filter(client -> client.getAssignedUser() != null && client.getAssignedUser().getId().equals(userId))
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -233,9 +231,9 @@ public class ClientService {
         response.setHasConflictOfInterest(client.getHasConflictOfInterest());
         response.setConflictOfInterestComment(client.getConflictOfInterestComment());
         response.setCasesCount(client.getCases() != null ? client.getCases().size() : 0);
-        response.setAssignedUsers(client.getAssignedUsers().stream()
-                .map(this::mapToUserSummary)
-                .collect(Collectors.toList()));
+        if (client.getAssignedUser() != null) {
+            response.setAssignedUser(mapToUserSummary(client.getAssignedUser()));
+        }
         response.setReferenceNumber(client.getReferenceNumber());
         if (client.getCreatedByUser() != null) {
             response.setCreatedByUser(mapToUserSummary(client.getCreatedByUser()));

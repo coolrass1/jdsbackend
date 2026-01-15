@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -30,6 +31,8 @@ public class CaseUpdateRequest {
     private LocalDateTime dueDate;
 
     private Long assignedUserId;
+
+    private Set<Long> participantIds;
 
     private Long clientId;
 
